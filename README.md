@@ -392,9 +392,8 @@ Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails.
 ## 📞 Contact
 
 Pour toute question ou suggestion :
-- 📧 Email : support@votre-domaine.com
-- 🐛 Issues : GitHub Issues
-- 💬 Chat : Discord/Slack
+- 📧 Email : keskasilyes@gmail.com
+
 
 ---
 
