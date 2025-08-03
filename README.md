@@ -1,400 +1,369 @@
-# 🗄️ TrueNAS + FTP System
+# 🗄️ TrueNAS + FTP System - Enhanced Version 2.0
 
-Système complet de gestion des téléchargements FTP avec stockage TrueNAS intégré.
+> نظام متطور لإدارة التحميلات من خوادم FTP مع تكامل TrueNAS ومراقبة شاملة
 
-## 🚀 Installation rapide
+[![Version](https://img.shields.io/badge/version-2.0-blue.svg)](https://github.com/your-repo/truenas-ftp-system)
+[![Docker](https://img.shields.io/badge/docker-ready-brightgreen.svg)](https://www.docker.com/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Status](https://img.shields.io/badge/status-production--ready-success.svg)]()
 
+## 🚀 المميزات الجديدة في الإصدار 2.0
+
+### ⚡ تحسينات الأداء
+- **تحميلات متوازية**: دعم لتحميل عدة ملفات في نفس الوقت
+- **استئناف التحميل**: إمكانية استكمال التحميلات المتوقفة
+- **ضغط ذكي**: ضغط تلقائي للملفات القديمة
+- **إلغاء التكرار**: تجنب تحميل الملفات المكررة
+
+### 🔒 الأمان المتقدم
+- **شهادات SSL**: دعم HTTPS مع شهادات مخصصة
+- **مصادقة قوية**: كلمات مرور معقدة ومشفرة
+- **عزل الشبكة**: شبكات Docker منفصلة للأمان
+- **مراقبة الأمان**: تنبيهات عند محاولات الوصول المشبوهة
+
+### 📊 المراقبة والتحليل
+- **Prometheus**: جمع المقاييس في الوقت الفعلي
+- **Grafana**: لوحات تحكم تفاعلية للبيانات
+- **Loki**: تجميع وتحليل السجلات
+- **تنبيهات ذكية**: إشعارات عبر البريد الإلكتروني أو Webhook
+
+### 🎨 واجهة المستخدم المحسنة
+- **لوحة تحكم متطورة**: واجهة عربية حديثة ومتجاوبة
+- **إحصائيات مفصلة**: رسوم بيانية لاستخدام النظام
+- **إدارة الملفات**: تصفح وإدارة الملفات بسهولة
+- **التحكم المباشر**: تنفيذ العمليات من الواجهة
+
+## 📋 متطلبات النظام
+
+### الحد الأدنى
+- **المعالج**: 2 أنوية
+- **الذاكرة**: 4 GB RAM
+- **التخزين**: 20 GB مساحة فارغة
+- **الشبكة**: اتصال إنترنت مستقر
+
+### موصى به
+- **المعالج**: 4+ أنوية
+- **الذاكرة**: 8+ GB RAM
+- **التخزين**: 100+ GB SSD
+- **الشبكة**: 100 Mbps+
+
+### البرامج المطلوبة
+- Docker >= 20.0
+- Docker Compose >= 1.27
+- Bash >= 4.0
+- curl, wget
+
+## 🚀 التثبيت السريع
+
+### 1. تحميل وتثبيت
 ```bash
-# 1. Cloner ou télécharger les fichiers
-wget https://raw.githubusercontent.com/your-repo/deploy.sh
-chmod +x deploy.sh
+# تحميل أحدث إصدار
+git clone https://github.com/your-repo/truenas-ftp-system.git
+cd truenas-ftp-system
 
-# 2. Installation automatique
-./deploy.sh install
-
-# 3. Accéder aux services
-# TrueNAS: http://localhost
-# Dashboard: http://localhost:8080
+# تشغيل المثبت التفاعلي
+chmod +x deploy-optimized.sh
+./deploy-optimized.sh
 ```
 
-## 📋 Prérequis
-
-- **Docker** >= 20.0
-- **Docker Compose** >= 1.27
-- **Espace disque** >= 10 GB
-- **RAM** >= 4 GB
-- **Système** : Linux/macOS/Windows avec WSL2
-
-## 🏗️ Architecture
-
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   FTP Server    │────│  Docker Host    │────│    TrueNAS      │
-│  Nitroflare     │    │   FTP Client    │    │   Core NAS      │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-                                │
-                       ┌─────────────────┐
-                       │   Dashboard     │
-                       │  (Web UI)       │
-                       └─────────────────┘
-```
-
-## 📁 Structure du projet
-
-```
-truenas-ftp-system/
-├── docker-compose-complete.yml    # Configuration Docker
-├── deploy.sh                      # Script d'installation
-├── .env                          # Variables d'environnement
-├── scripts/                      # Scripts d'automatisation
-│   ├── connect-ftp.sh           # Connexion FTP
-│   ├── download-to-truenas.sh   # Téléchargement vers TrueNAS
-│   ├── sync-truenas.sh          # Synchronisation
-│   ├── status.sh                # Statut du système
-│   └── ...
-├── dashboard/                    # Interface web
-│   └── index.html
-├── truenas-data/                 # Données TrueNAS
-│   ├── config/                  # Configuration
-│   └── pool/                    # Pool de stockage
-│       ├── downloads/           # Fichiers téléchargés
-│       ├── uploads/             # Fichiers à uploader
-│       ├── archive/             # Archives
-│       └── temp/                # Temporaires
-├── logs/                        # Fichiers de logs
-└── downloads/                   # Downloads locaux
-```
-
-## 🛠️ Services inclus
-
-### 1. **TrueNAS Core**
-- Interface web de gestion
-- Stockage ZFS avec snapshots
-- Partages NFS/SMB
-- Monitoring système
-
-### 2. **FTP Client**
-- Connexion automatique à Nitroflare
-- Téléchargement vers TrueNAS
-- Interface ligne de commande
-
-### 3. **Service de Synchronisation**
-- Synchronisation automatique
-- Archivage des anciens fichiers
-- Nettoyage automatique
-
-### 4. **Dashboard Web**
-- Monitoring en temps réel
-- Actions rapides
-- Visualisation des logs
-
-## 📖 Guide d'utilisation
-
-### Démarrage
-
+### 2. التكوين السريع
 ```bash
-# Démarrer tous les services
-docker-compose -f docker-compose-complete.yml up -d
+# نسخ ملف التكوين
+cp .env.example .env
 
-# Démarrer avec monitoring
-docker-compose -f docker-compose-complete.yml --profile monitoring up -d
+# تحرير الإعدادات (مطلوب!)
+nano .env
 
-# Démarrer avec dashboard
-docker-compose -f docker-compose-complete.yml --profile dashboard up -d
+# بدء النظام
+./deploy-optimized.sh install
 ```
 
-### Connexion FTP
+### 3. الوصول للخدمات
+- **لوحة التحكم**: http://localhost:8080
+- **TrueNAS**: http://localhost
+- **Grafana**: http://localhost:3000
+- **Prometheus**: http://localhost:9090
 
+## ⚙️ التكوين المتقدم
+
+### ملف .env
 ```bash
-# Connexion interactive
-docker-compose exec ftp-client /scripts/connect-ftp.sh
+# إعدادات FTP (مطلوبة)
+FTP_HOST=ftp71.nitroflare.com
+FTP_USER=your_username
+FTP_PASS=your_password
 
-# Lister les fichiers FTP
-docker-compose exec ftp-client lftp -u $FTP_USER,$FTP_PASS $FTP_HOST -e "ls; quit"
+# إعدادات الأداء
+MAX_CONCURRENT_DOWNLOADS=3
+DOWNLOAD_SPEED_LIMIT=0
+PARALLEL_TRANSFERS=2
+
+# إعدادات الأمان (غيّر هذه!)
+TRUENAS_ADMIN_PASSWORD=SecureAdmin2024!
+POSTGRES_PASSWORD=SecurePostgres2024!
+REDIS_PASSWORD=SecureRedis2024!
 ```
 
-### Téléchargements
-
-```bash
-# Télécharger un fichier vers TrueNAS
-docker-compose exec ftp-client /scripts/download-to-truenas.sh fichier.zip
-
-# Télécharger vers un dossier spécifique
-docker-compose exec ftp-client /scripts/download-to-truenas.sh fichier.zip /truenas/archive
-
-# Téléchargement en lot (depuis une liste)
-echo -e "fichier1.zip\nfichier2.rar\ndossier/fichier3.pdf" > download-list.txt
-docker-compose exec ftp-client /scripts/batch-download.sh /workspace/download-list.txt
+### التكوين المتقدم
+```yaml
+# docker-compose.override.yml
+version: '3.9'
+services:
+  ftp-client:
+    environment:
+      - CUSTOM_SETTING=value
+    volumes:
+      - ./custom-config:/config
 ```
 
-### Synchronisation
+## 🎮 الاستخدام
 
+### الأوامر الأساسية
 ```bash
-# Synchronisation manuelle
+# عرض حالة النظام
+./deploy-optimized.sh status
+
+# تحميل ملف واحد
+docker-compose exec ftp-client /scripts/enhanced-ftp-client.sh download /remote/file.zip
+
+# تحميل متعدد من قائمة
+echo -e "file1.zip\nfile2.rar" > download-list.txt
+docker-compose exec ftp-client /scripts/enhanced-ftp-client.sh batch download-list.txt
+
+# مزامنة البيانات
 docker-compose exec ftp-client /scripts/sync-truenas.sh
 
-# La synchronisation automatique s'exécute toutes les 30 minutes par défaut
+# عرض الإحصائيات
+docker-compose exec ftp-client /scripts/enhanced-ftp-client.sh stats 24h
+
+# فحص صحة النظام
+docker-compose exec ftp-client /scripts/enhanced-ftp-client.sh health
 ```
 
-### Monitoring
+### واجهة الويب
+1. **لوحة التحكم الرئيسية**: مراقبة شاملة للنظام
+2. **إدارة التحميلات**: بدء وإيقاف التحميلات
+3. **إدارة الملفات**: تصفح وتنظيم الملفات
+4. **الإعدادات**: تكوين النظام من الواجهة
 
-```bash
-# Voir le statut complet
-docker-compose exec ftp-client /scripts/status.sh
+## 📊 المراقبة والإحصائيات
 
-# Voir les logs en temps réel
-docker-compose logs -f
+### Grafana Dashboards
+- **System Overview**: نظرة عامة على النظام
+- **FTP Performance**: أداء التحميلات
+- **Storage Usage**: استخدام التخزين
+- **Network Activity**: نشاط الشبكة
 
-# Voir les logs d'un service spécifique
-docker-compose logs -f ftp-client
-docker-compose logs -f sync-service
+### Prometheus Metrics
+```promql
+# معدل التحميل
+rate(ftp_downloads_total[5m])
+
+# استخدام التخزين
+storage_used_bytes / storage_total_bytes * 100
+
+# أداء النظام
+system_cpu_usage_percent
 ```
 
-## 🔧 Configuration
+### التنبيهات التلقائية
+- مساحة التخزين منخفضة (< 10%)
+- فشل في الاتصال بـ FTP
+- استخدام CPU عالي (> 80%)
+- ذاكرة منخفضة (< 500MB)
 
-### Variables d'environnement (.env)
+## 🔧 الصيانة والاستكشاف
 
+### النسخ الاحتياطية
 ```bash
-# Configuration TrueNAS
-TRUENAS_ADMIN_PASSWORD=votre_mot_de_passe
-TRUENAS_ROOT_PASSWORD=root_password
-TRUENAS_USER=admin
+# إنشاء نسخة احتياطية يدوية
+./deploy-optimized.sh backup
 
-# Configuration FTP
-FTP_HOST=ftp71.nitroflare.com
-FTP_USER=votre_username
-FTP_PASS=votre_password
-
-# Configuration Services
-SYNC_INTERVAL=1800          # Synchronisation toutes les 30 min
-MONITOR_INTERVAL=300        # Monitoring toutes les 5 min
-ARCHIVE_DAYS=7              # Archiver après 7 jours
-
-# Ports
-DASHBOARD_PORT=8080
-TRUENAS_WEB_PORT=80
+# النسخ الاحتياطية التلقائية
+# يتم تشغيلها يومياً في الساعة 2:00 صباحاً
 ```
 
-### Personnalisation des scripts
+### حل المشاكل الشائعة
 
-Les scripts dans `scripts/` peuvent être modifiés selon vos besoins :
-
-- **connect-ftp.sh** : Modifier les paramètres de connexion FTP
-- **download-to-truenas.sh** : Personnaliser la logique de téléchargement
-- **sync-truenas.sh** : Ajuster la synchronisation
-- **status.sh** : Ajouter des métriques personnalisées
-
-## 📊 Interface Web
-
-### Dashboard (http://localhost:8080)
-- 📈 Statistiques en temps réel
-- 🎮 Actions rapides
-- 📜 Logs système
-- 🔄 Actualisation automatique
-
-### TrueNAS Web UI (http://localhost)
-- 🗄️ Gestion du stockage
-- 📊 Monitoring système
-- 🔧 Configuration avancée
-- 📸 Snapshots et sauvegardes
-
-## 🚨 Commandes de maintenance
-
-### Nettoyage
-
+#### مشكلة: فشل الاتصال بـ FTP
 ```bash
-# Nettoyer les fichiers temporaires
-docker-compose exec ftp-client /scripts/cleanup-truenas.sh
-
-# Nettoyer les containers et volumes
-docker-compose down -v
-docker system prune -f
-```
-
-### Sauvegardes
-
-```bash
-# Créer une sauvegarde
-docker-compose exec ftp-client /scripts/backup-truenas.sh
-
-# Sauvegarder la configuration
-tar -czf backup-config-$(date +%Y%m%d).tar.gz docker-compose-complete.yml .env scripts/
-
-# Restaurer depuis une sauvegarde
-tar -xzf backup-config-YYYYMMDD.tar.gz
-```
-
-### Dépannage
-
-```bash
-# Redémarrer un service
-docker-compose restart ftp-client
-
-# Reconstruire les containers
-docker-compose build --no-cache
-
-# Vérifier l'état des services
-docker-compose ps
-docker-compose top
-
-# Accéder au shell d'un container
-docker-compose exec ftp-client sh
-docker-compose exec truenas bash
-```
-
-## 🔍 Résolution de problèmes
-
-### Problèmes courants
-
-#### 1. **Connexion FTP échoue**
-```bash
-# Vérifier les credentials
-docker-compose exec ftp-client env | grep FTP
-
-# Tester la connectivité
+# فحص الاتصال
 docker-compose exec ftp-client ping ftp71.nitroflare.com
-docker-compose exec ftp-client telnet ftp71.nitroflare.com 21
+
+# اختبار بيانات الدخول
+docker-compose exec ftp-client /scripts/connect-ftp.sh
+
+# فحص السجلات
+docker-compose logs ftp-client
 ```
 
-#### 2. **TrueNAS inaccessible**
+#### مشكلة: مساحة التخزين ممتلئة
 ```bash
-# Vérifier le container TrueNAS
-docker-compose logs truenas
+# تنظيف الملفات المؤقتة
+docker-compose exec ftp-client /scripts/enhanced-ftp-client.sh cleanup
 
-# Redémarrer TrueNAS
-docker-compose restart truenas
+# أرشفة الملفات القديمة
+docker-compose exec ftp-client /scripts/sync-truenas.sh
 
-# Vérifier les ports
-netstat -tlnp | grep :80
+# فحص استخدام المساحة
+docker-compose exec ftp-client df -h /truenas
 ```
 
-#### 3. **Problèmes de stockage**
+#### مشكلة: بطء في الأداء
 ```bash
-# Vérifier l'espace disque
-df -h
-docker system df
-
-# Nettoyer l'espace
-docker system prune -a
-```
-
-#### 4. **Permissions des fichiers**
-```bash
-# Corriger les permissions
-sudo chown -R $(id -u):$(id -g) truenas-data/
-chmod -R 755 truenas-data/
-```
-
-### Logs de débogage
-
-```bash
-# Activer le mode debug
-export COMPOSE_LOG_LEVEL=DEBUG
-
-# Logs détaillés
-docker-compose -f docker-compose-complete.yml --verbose up
-
-# Logs par service
-docker-compose logs --tail=100 ftp-client
-docker-compose logs --tail=100 sync-service
-docker-compose logs --tail=100 truenas
-```
-
-## 📈 Optimisations
-
-### Performance
-
-```bash
-# Optimiser Docker
-echo '{"log-driver": "json-file", "log-opts": {"max-size": "10m", "max-file": "3"}}' | sudo tee /etc/docker/daemon.json
-sudo systemctl restart docker
-
-# Monitoring des ressources
+# فحص استخدام الموارد
 docker stats
+
+# تحسين قاعدة البيانات
+./deploy-optimized.sh maintenance
+
+# إعادة تشغيل الخدمات
+docker-compose restart
 ```
 
-### Sécurité
+## 🛡️ الأمان
 
+### أفضل الممارسات
+1. **غيّر كلمات المرور الافتراضية** في ملف `.env`
+2. **فعّل SSL** للاتصالات المشفرة
+3. **حدّث النظام** بانتظام
+4. **راقب السجلات** للأنشطة المشبوهة
+5. **استخدم جدار ناري** لحماية إضافية
+
+### إعدادات الأمان
 ```bash
-# Changer les mots de passe par défaut
-# Éditer le fichier .env avec des mots de passe forts
+# تفعيل SSL
+SSL_ENABLED=true
+SSL_CERT_PATH=./config/ssl/cert.pem
+SSL_KEY_PATH=./config/ssl/private.key
 
-# Limiter l'accès réseau
-# Configurer un firewall si nécessaire
+# تقييد الوصول
+API_RATE_LIMIT=100
+SESSION_TIMEOUT=1800
+
+# المصادقة الثنائية (اختياري)
+REQUIRE_2FA=true
 ```
 
-### Automatisation
+## 🔄 التحديث
 
+### تحديث تلقائي
 ```bash
-# Ajouter au crontab pour démarrage automatique
-echo "@reboot cd /path/to/project && docker-compose up -d" | crontab -
-
-# Script de surveillance
-#!/bin/bash
-# health-check.sh
-if ! docker-compose ps | grep -q "Up"; then
-    docker-compose up -d
-    echo "Services redémarrés: $(date)" >> /var/log/truenas-ftp.log
-fi
+# تحديث إلى أحدث إصدار
+git pull origin main
+./deploy-optimized.sh install
 ```
 
-## 🤝 Contribution
-
-### Structure de développement
-
+### تحديث يدوي
 ```bash
-# Mode développement
-docker-compose -f docker-compose-complete.yml --profile dev up -d
+# إيقاف النظام
+docker-compose down
 
-# Tests
-./deploy.sh test
+# تحديث التكوينات
+./deploy-optimized.sh config
 
-# Ajout de nouvelles fonctionnalités
-# 1. Modifier les scripts dans scripts/
-# 2. Tester avec le container dev-tools
-# 3. Mettre à jour la documentation
+# إعادة البناء والتشغيل
+docker-compose build
+docker-compose up -d
 ```
 
-## 📄 Licence
+## 🤝 المساهمة
 
-Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails.
+### كيفية المساهمة
+1. Fork المشروع
+2. إنشاء فرع للميزة الجديدة
+3. تطوير وتطبيق التحسينات
+4. إرسال Pull Request
 
-## 🆘 Support
+### Guidelines
+- اتبع معايير الترميز الموجودة
+- أضف اختبارات للميزات الجديدة
+- حدّث الوثائق
+- استخدم رسائل commit واضحة
 
-### Documentation officielle
-- [Docker](https://docs.docker.com)
-- [Docker Compose](https://docs.docker.com/compose)
-- [TrueNAS](https://www.truenas.com/docs)
+## 🗺️ خارطة الطريق
 
-### Communauté
-- Issues GitHub
-- Forums TrueNAS
-- Discord Docker
+### الإصدار 2.1 (Q2 2024)
+- [ ] دعم خوادم FTP متعددة
+- [ ] واجهة هاتف محمول
+- [ ] تكامل مع خدمات التخزين السحابية
+- [ ] API REST كامل
 
-## 🚀 Roadmap
+### الإصدار 2.2 (Q3 2024)
+- [ ] ذكاء اصطناعي لتحسين التحميلات
+- [ ] تحليل محتوى الملفات
+- [ ] تصنيف تلقائي للملفات
+- [ ] تنبيهات متقدمة
 
-### Version actuelle (1.0)
-- ✅ Installation automatique
-- ✅ Interface web dashboard
-- ✅ Synchronisation automatique
-- ✅ Monitoring de base
+### الإصدار 3.0 (Q4 2024)
+- [ ] إعادة تصميم كاملة للواجهة
+- [ ] دعم Kubernetes
+- [ ] تكامل مع نظم إدارة المحتوى
+- [ ] مقاييس أداء متقدمة
 
-### Version future (2.0)
-- 🔄 API REST
-- 📱 Application mobile
-- 🔒 Authentification avancée
-- 📊 Métriques avancées
-- 🌐 Support multi-serveurs FTP
-- 🤖 Intelligence artificielle pour l'optimisation
+## 📞 الدعم والمساعدة
+
+### القنوات الرسمية
+- **GitHub Issues**: للأخطاء وطلبات الميزات
+- **Discord**: للمناقشات المجتمعية
+- **Email**: keskasilyes@gmail.com
+- **Documentation**: [Wiki](https://github.com/your-repo/wiki)
+
+### الأسئلة الشائعة
+
+**س: هل يمكن استخدام النظام مع خوادم FTP أخرى؟**
+ج: نعم، يمكن تكوين أي خادم FTP عبر تحديث متغيرات البيئة.
+
+**س: ما هو الحد الأقصى لحجم الملفات؟**
+ج: لا يوجد حد نظرياً، ولكن يعتمد على مساحة التخزين المتاحة.
+
+**س: هل يدعم النظام التحميل من روابط HTTP؟**
+ج: حالياً لا، ولكن مخطط إضافة هذه الميزة في الإصدار 2.1.
+
+**س: كيف يمكن إضافة تنبيهات مخصصة؟**
+ج: يمكن تكوين التنبيهات عبر Grafana أو إضافة scripts مخصصة.
+
+## 📄 الترخيص
+
+هذا المشروع مرخص تحت رخصة MIT - انظر ملف [LICENSE](LICENSE) للتفاصيل.
+
+## 🙏 شكر وتقدير
+
+- **TrueNAS Community** - للنظام الأساسي الممتاز
+- **Docker Team** - لتقنية الحاويات
+- **Prometheus & Grafana** - لأدوات المراقبة
+- **المساهمون** - لجهودهم في تطوير المشروع
 
 ---
 
-## 📞 Contact
+## 📊 الإحصائيات
 
-Pour toute question ou suggestion :
-- 📧 Email : keskasilyes@gmail.com
-
+![GitHub stars](https://img.shields.io/github/stars/your-repo/truenas-ftp-system)
+![GitHub forks](https://img.shields.io/github/forks/your-repo/truenas-ftp-system)
+![GitHub issues](https://img.shields.io/github/issues/your-repo/truenas-ftp-system)
+![GitHub downloads](https://img.shields.io/github/downloads/your-repo/truenas-ftp-system/total)
 
 ---
 
-**Fait avec ❤️ pour la communauté open source**
+**صُنع بـ ❤️ للمجتمع العربي المفتوح المصدر**
+
+> "أفضل طريقة للتنبؤ بالمستقبل هي إنشاؤه" - بيتر دراكر
+
+## 🎯 بدء سريع في 3 خطوات
+
+```bash
+# 1. التحميل
+git clone https://github.com/your-repo/truenas-ftp-system.git && cd truenas-ftp-system
+
+# 2. التكوين
+cp .env.example .env && nano .env  # أدخل بيانات FTP الخاصة بك
+
+# 3. التشغيل
+./deploy-optimized.sh install
+```
+
+🎉 **مبروك! النظام جاهز للاستخدام**
+
+---
+
+*آخر تحديث: يناير 2024*
