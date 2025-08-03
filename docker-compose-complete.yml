@@ -1,8 +1,56 @@
-version: '3.8'
+version: '3.9'
+
+# ========================================
+# TrueNAS + FTP System - Optimized Version
+# Enhanced performance, reliability, and monitoring
+# ========================================
 
 services:
   # ========================================
-  # TrueNAS Core Container
+  # PostgreSQL Database for TrueNAS
+  # ========================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: truenas-postgres
+    hostname: postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: truenas
+      POSTGRES_USER: truenas
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-truenas123}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgresql.conf:/etc/postgresql/postgresql.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U truenas"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    networks:
+      - truenas-network
+
+  # ========================================
+  # Redis Cache for Performance
+  # ========================================
+  redis:
+    image: redis:7-alpine
+    container_name: truenas-redis
+    hostname: redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis123}
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+    networks:
+      - truenas-network
+
+  # ========================================
+  # TrueNAS Core Container - Enhanced
   # ========================================
   truenas:
     image: ixsystems/truenas:latest
@@ -10,21 +58,39 @@ services:
     hostname: truenas
     privileged: true
     restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     ports:
-      - "80:80"           # Web UI
-      - "443:443"         # HTTPS Web UI
-      - "22:22"           # SSH
-      - "2049:2049"       # NFS
-      - "111:111"         # RPC
-      - "445:445"         # SMB
-      - "139:139"         # NetBIOS
+      - "${TRUENAS_WEB_PORT:-80}:80"           # Web UI
+      - "${TRUENAS_HTTPS_PORT:-443}:443"       # HTTPS Web UI
+      - "${TRUENAS_SSH_PORT:-2222}:22"         # SSH (changed from 22)
+      - "${TRUENAS_NFS_PORT:-2049}:2049"       # NFS
+      - "${TRUENAS_SMB_PORT:-445}:445"         # SMB
+      - "${TRUENAS_NETBIOS_PORT:-139}:139"     # NetBIOS
     volumes:
       - truenas-config:/data
       - truenas-pool:/mnt/pool
-      - ./truenas-config:/etc/truenas
+      - truenas-boot:/boot
+      - ./config/truenas:/etc/truenas:ro
+      - /dev:/dev:ro
     environment:
       - TRUENAS_ADMIN_PASSWORD=${TRUENAS_ADMIN_PASSWORD:-admin123}
       - TRUENAS_ROOT_PASSWORD=${TRUENAS_ROOT_PASSWORD:-root123}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_DB=truenas
+      - POSTGRES_USER=truenas
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-truenas123}
+      - REDIS_HOST=redis
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis123}
+      - TZ=${TIMEZONE:-Europe/Paris}
+    cap_add:
+      - SYS_ADMIN
+      - NET_ADMIN
+    devices:
+      - /dev/fuse:/dev/fuse
     networks:
       - truenas-network
     healthcheck:
@@ -32,137 +98,349 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2.0'
+        reservations:
+          memory: 2G
+          cpus: '1.0'
 
   # ========================================
-  # Client FTP Nitroflare
+  # Enhanced FTP Client with Better Performance
   # ========================================
   ftp-client:
-    image: alpine:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.ftp-client
     container_name: ftp-nitroflare-client
     hostname: ftp-client
     working_dir: /workspace
+    restart: unless-stopped
     depends_on:
-      - truenas
+      truenas:
+        condition: service_healthy
     volumes:
-      - ./scripts:/scripts
+      - ./scripts:/scripts:ro
+      - ./config:/config:ro
       - ./downloads:/downloads-local
       - ./uploads:/uploads-local
       - ./logs:/logs
-      - .:/workspace
-      # Montage des volumes TrueNAS
+      - .:/workspace:ro
+      # TrueNAS mount points
       - truenas-downloads:/truenas/downloads
       - truenas-uploads:/truenas/uploads
       - truenas-archive:/truenas/archive
       - truenas-temp:/truenas/temp
+      - truenas-processing:/truenas/processing
     environment:
-      # Configuration FTP
-      - FTP_HOST=ftp71.nitroflare.com
-      - FTP_USER=dZMQBizt
-      - FTP_PASS=b7126e26c0
-      # Configuration TrueNAS
+      # FTP Configuration
+      - FTP_HOST=${FTP_HOST:-ftp71.nitroflare.com}
+      - FTP_USER=${FTP_USER:-your_username}
+      - FTP_PASS=${FTP_PASS:-your_password}
+      - FTP_PORT=${FTP_PORT:-21}
+      - FTP_PASSIVE=${FTP_PASSIVE:-true}
+      - FTP_SSL=${FTP_SSL:-false}
+      - FTP_TIMEOUT=${FTP_TIMEOUT:-30}
+      - FTP_RETRY_COUNT=${FTP_RETRY_COUNT:-3}
+      # TrueNAS Configuration
       - TRUENAS_HOST=truenas
       - TRUENAS_API_URL=http://truenas/api/v2.0
       - TRUENAS_USER=${TRUENAS_USER:-admin}
       - TRUENAS_PASS=${TRUENAS_ADMIN_PASSWORD:-admin123}
-    command: >
-      sh -c "
-        apk add --no-cache lftp curl rsync sshpass jq wget nano &&
-        chmod +x /scripts/*.sh &&
-        echo 'FTP Client prêt! TrueNAS disponible sur: http://truenas' &&
-        echo 'Commandes disponibles:' &&
-        echo '  docker-compose exec ftp-client /scripts/connect-ftp.sh' &&
-        echo '  docker-compose exec ftp-client /scripts/download-to-truenas.sh fichier.zip' &&
-        echo '  docker-compose exec ftp-client /scripts/sync-truenas.sh' &&
-        tail -f /dev/null
-      "
+      # Performance Settings
+      - MAX_CONCURRENT_DOWNLOADS=${MAX_CONCURRENT_DOWNLOADS:-3}
+      - DOWNLOAD_SPEED_LIMIT=${DOWNLOAD_SPEED_LIMIT:-0}
+      - CHUNK_SIZE=${CHUNK_SIZE:-8192}
+      - PARALLEL_TRANSFERS=${PARALLEL_TRANSFERS:-2}
+      # System
+      - TZ=${TIMEZONE:-Europe/Paris}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
     stdin_open: true
     tty: true
-    restart: unless-stopped
     networks:
       - truenas-network
+    healthcheck:
+      test: ["CMD", "sh", "/scripts/health-check.sh"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
 
   # ========================================
-  # Service de Synchronisation
+  # Enhanced Sync Service with Intelligent Scheduling
   # ========================================
   sync-service:
-    image: alpine:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.sync-service
     container_name: ftp-sync-service
+    hostname: sync-service
+    restart: unless-stopped
     depends_on:
-      - truenas
-      - ftp-client
+      truenas:
+        condition: service_healthy
+      ftp-client:
+        condition: service_healthy
     volumes:
-      - ./scripts:/scripts
+      - ./scripts:/scripts:ro
+      - ./config:/config:ro
       - ./logs:/logs
       - truenas-downloads:/truenas/downloads
       - truenas-uploads:/truenas/uploads
       - truenas-archive:/truenas/archive
       - truenas-temp:/truenas/temp
+      - truenas-processing:/truenas/processing
     environment:
       - SYNC_INTERVAL=${SYNC_INTERVAL:-1800}
       - ARCHIVE_DAYS=${ARCHIVE_DAYS:-7}
+      - CLEANUP_DAYS=${CLEANUP_DAYS:-30}
+      - MAX_ARCHIVE_SIZE=${MAX_ARCHIVE_SIZE:-100G}
+      - COMPRESSION_ENABLED=${COMPRESSION_ENABLED:-true}
+      - DEDUPLICATION_ENABLED=${DEDUPLICATION_ENABLED:-true}
       - TRUENAS_HOST=truenas
-      - FTP_HOST=ftp71.nitroflare.com
-      - FTP_USER=dZMQBizt
-      - FTP_PASS=b7126e26c0
-    command: ["sh", "/scripts/sync-daemon.sh"]
-    restart: unless-stopped
+      - FTP_HOST=${FTP_HOST:-ftp71.nitroflare.com}
+      - TZ=${TIMEZONE:-Europe/Paris}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
     networks:
       - truenas-network
+    healthcheck:
+      test: ["CMD", "sh", "/scripts/sync-health-check.sh"]
+      interval: 120s
+      timeout: 15s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
 
   # ========================================
-  # Service de Monitoring
+  # Advanced Monitoring Service
   # ========================================
   monitor-service:
-    image: alpine:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.monitor
     container_name: ftp-monitor-service
+    hostname: monitor
     profiles:
       - monitoring
+      - full
+    restart: unless-stopped
     depends_on:
-      - truenas
+      truenas:
+        condition: service_healthy
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
     volumes:
-      - ./scripts:/scripts
+      - ./scripts:/scripts:ro
+      - ./config/monitoring:/config:ro
       - ./logs:/logs
-      - truenas-downloads:/truenas/downloads
-      - truenas-uploads:/truenas/uploads
-      - truenas-archive:/truenas/archive
+      - prometheus-data:/prometheus
+      - truenas-downloads:/truenas/downloads:ro
+      - truenas-uploads:/truenas/uploads:ro
+      - truenas-archive:/truenas/archive:ro
     environment:
-      - MONITOR_INTERVAL=${MONITOR_INTERVAL:-300}
+      - MONITOR_INTERVAL=${MONITOR_INTERVAL:-60}
+      - ALERT_EMAIL=${ALERT_EMAIL:-admin@example.com}
+      - ALERT_WEBHOOK=${ALERT_WEBHOOK:-}
+      - METRICS_RETENTION=${METRICS_RETENTION:-15d}
       - TRUENAS_HOST=truenas
       - TRUENAS_API_URL=http://truenas/api/v2.0
-    command: ["sh", "/scripts/monitor-daemon.sh"]
-    restart: unless-stopped
+      - POSTGRES_HOST=postgres
+      - REDIS_HOST=redis
+      - TZ=${TIMEZONE:-Europe/Paris}
     networks:
       - truenas-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
 
   # ========================================
-  # Service Web Dashboard
+  # Advanced Web Dashboard with Real-time Updates
   # ========================================
   dashboard:
-    image: nginx:alpine
+    build:
+      context: .
+      dockerfile: Dockerfile.dashboard
     container_name: ftp-dashboard
+    hostname: dashboard
     profiles:
       - dashboard
+      - full
+    restart: unless-stopped
+    depends_on:
+      truenas:
+        condition: service_healthy
+    ports:
+      - "${DASHBOARD_PORT:-8080}:80"
+      - "${DASHBOARD_API_PORT:-8081}:3000"
+    volumes:
+      - ./dashboard:/usr/share/nginx/html:ro
+      - ./config/nginx:/etc/nginx/conf.d:ro
+      - ./logs:/usr/share/nginx/html/logs:ro
+      - truenas-downloads:/data/downloads:ro
+      - truenas-uploads:/data/uploads:ro
+      - truenas-archive:/data/archive:ro
+    environment:
+      - API_URL=http://truenas/api/v2.0
+      - WEBSOCKET_URL=ws://dashboard:3000
+      - REFRESH_INTERVAL=${DASHBOARD_REFRESH:-5000}
+      - TZ=${TIMEZONE:-Europe/Paris}
+    networks:
+      - truenas-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ========================================
+  # Nginx Load Balancer & Reverse Proxy
+  # ========================================
+  nginx:
+    image: nginx:alpine
+    container_name: nginx-proxy
+    profiles:
+      - proxy
+      - full
+    restart: unless-stopped
+    ports:
+      - "${NGINX_HTTP_PORT:-8000}:80"
+      - "${NGINX_HTTPS_PORT:-8443}:443"
+    volumes:
+      - ./config/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./config/nginx/sites:/etc/nginx/sites.d:ro
+      - ./config/ssl:/etc/ssl/private:ro
+      - ./logs/nginx:/var/log/nginx
     depends_on:
       - truenas
-    ports:
-      - "8080:80"
+      - dashboard
+    networks:
+      - truenas-network
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ========================================
+  # Backup Service
+  # ========================================
+  backup-service:
+    image: alpine:latest
+    container_name: backup-service
+    profiles:
+      - backup
+      - full
+    restart: unless-stopped
     volumes:
-      - ./dashboard:/usr/share/nginx/html
-      - ./logs:/usr/share/nginx/html/logs:ro
+      - ./scripts:/scripts:ro
+      - ./backups:/backups
+      - truenas-config:/backup-source/config:ro
+      - truenas-pool:/backup-source/pool:ro
+      - postgres-data:/backup-source/postgres:ro
+    environment:
+      - BACKUP_SCHEDULE=${BACKUP_SCHEDULE:-0 2 * * *}
+      - BACKUP_RETENTION=${BACKUP_RETENTION:-7}
+      - BACKUP_COMPRESSION=${BACKUP_COMPRESSION:-true}
+      - S3_BACKUP_ENABLED=${S3_BACKUP_ENABLED:-false}
+      - S3_BUCKET=${S3_BUCKET:-}
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY:-}
+      - S3_SECRET_KEY=${S3_SECRET_KEY:-}
+      - TZ=${TIMEZONE:-Europe/Paris}
+    command: ["sh", "/scripts/backup-daemon.sh"]
     networks:
       - truenas-network
 
+  # ========================================
+  # Log Aggregation Service (ELK Stack Alternative)
+  # ========================================
+  log-aggregator:
+    image: grafana/loki:latest
+    container_name: log-aggregator
+    profiles:
+      - logging
+      - full
+    restart: unless-stopped
+    ports:
+      - "${LOKI_PORT:-3100}:3100"
+    volumes:
+      - loki-data:/loki
+      - ./config/loki:/etc/loki:ro
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - truenas-network
+
+  # ========================================
+  # Log Viewer (Grafana)
+  # ========================================
+  log-viewer:
+    image: grafana/grafana:latest
+    container_name: log-viewer
+    profiles:
+      - logging
+      - full
+    restart: unless-stopped
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./config/grafana:/etc/grafana:ro
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin123}
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    networks:
+      - truenas-network
+
+# ========================================
+# Network Configuration
+# ========================================
 networks:
   truenas-network:
     driver: bridge
     ipam:
+      driver: default
       config:
-        - subnet: 172.20.0.0/16
+        - subnet: ${TRUENAS_SUBNET:-172.20.0.0/16}
+          gateway: ${TRUENAS_GATEWAY:-172.20.0.1}
+    driver_opts:
+      com.docker.network.driver.mtu: "1500"
+      com.docker.network.bridge.name: "truenas-br0"
 
+# ========================================
+# Volume Configuration
+# ========================================
 volumes:
-  # ========================================
-  # Volumes TrueNAS
-  # ========================================
+  # Database volumes
+  postgres-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/postgres
+
+  redis-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/redis
+
+  # TrueNAS volumes
   truenas-config:
     driver: local
     driver_opts:
@@ -177,7 +455,14 @@ volumes:
       o: bind
       device: ./truenas-data/pool
 
-  # Datasets TrueNAS (simulés en local pour le développement)
+  truenas-boot:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./truenas-data/boot
+
+  # Data volumes with better organization
   truenas-downloads:
     driver: local
     driver_opts:
@@ -203,5 +488,34 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      o: bind
+      o: bind  
       device: ./truenas-data/pool/temp
+
+  truenas-processing:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./truenas-data/pool/processing
+
+  # Monitoring volumes
+  prometheus-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/prometheus
+
+  grafana-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/grafana
+
+  loki-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/loki
