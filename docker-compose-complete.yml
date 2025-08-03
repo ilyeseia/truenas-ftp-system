@@ -1,0 +1,207 @@
+version: '3.8'
+
+services:
+  # ========================================
+  # TrueNAS Core Container
+  # ========================================
+  truenas:
+    image: ixsystems/truenas:latest
+    container_name: truenas-core
+    hostname: truenas
+    privileged: true
+    restart: unless-stopped
+    ports:
+      - "80:80"           # Web UI
+      - "443:443"         # HTTPS Web UI
+      - "22:22"           # SSH
+      - "2049:2049"       # NFS
+      - "111:111"         # RPC
+      - "445:445"         # SMB
+      - "139:139"         # NetBIOS
+    volumes:
+      - truenas-config:/data
+      - truenas-pool:/mnt/pool
+      - ./truenas-config:/etc/truenas
+    environment:
+      - TRUENAS_ADMIN_PASSWORD=${TRUENAS_ADMIN_PASSWORD:-admin123}
+      - TRUENAS_ROOT_PASSWORD=${TRUENAS_ROOT_PASSWORD:-root123}
+    networks:
+      - truenas-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/api/v2.0/system/info"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ========================================
+  # Client FTP Nitroflare
+  # ========================================
+  ftp-client:
+    image: alpine:latest
+    container_name: ftp-nitroflare-client
+    hostname: ftp-client
+    working_dir: /workspace
+    depends_on:
+      - truenas
+    volumes:
+      - ./scripts:/scripts
+      - ./downloads:/downloads-local
+      - ./uploads:/uploads-local
+      - ./logs:/logs
+      - .:/workspace
+      # Montage des volumes TrueNAS
+      - truenas-downloads:/truenas/downloads
+      - truenas-uploads:/truenas/uploads
+      - truenas-archive:/truenas/archive
+      - truenas-temp:/truenas/temp
+    environment:
+      # Configuration FTP
+      - FTP_HOST=ftp71.nitroflare.com
+      - FTP_USER=dZMQBizt
+      - FTP_PASS=b7126e26c0
+      # Configuration TrueNAS
+      - TRUENAS_HOST=truenas
+      - TRUENAS_API_URL=http://truenas/api/v2.0
+      - TRUENAS_USER=${TRUENAS_USER:-admin}
+      - TRUENAS_PASS=${TRUENAS_ADMIN_PASSWORD:-admin123}
+    command: >
+      sh -c "
+        apk add --no-cache lftp curl rsync sshpass jq wget nano &&
+        chmod +x /scripts/*.sh &&
+        echo 'FTP Client prêt! TrueNAS disponible sur: http://truenas' &&
+        echo 'Commandes disponibles:' &&
+        echo '  docker-compose exec ftp-client /scripts/connect-ftp.sh' &&
+        echo '  docker-compose exec ftp-client /scripts/download-to-truenas.sh fichier.zip' &&
+        echo '  docker-compose exec ftp-client /scripts/sync-truenas.sh' &&
+        tail -f /dev/null
+      "
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+    networks:
+      - truenas-network
+
+  # ========================================
+  # Service de Synchronisation
+  # ========================================
+  sync-service:
+    image: alpine:latest
+    container_name: ftp-sync-service
+    depends_on:
+      - truenas
+      - ftp-client
+    volumes:
+      - ./scripts:/scripts
+      - ./logs:/logs
+      - truenas-downloads:/truenas/downloads
+      - truenas-uploads:/truenas/uploads
+      - truenas-archive:/truenas/archive
+      - truenas-temp:/truenas/temp
+    environment:
+      - SYNC_INTERVAL=${SYNC_INTERVAL:-1800}
+      - ARCHIVE_DAYS=${ARCHIVE_DAYS:-7}
+      - TRUENAS_HOST=truenas
+      - FTP_HOST=ftp71.nitroflare.com
+      - FTP_USER=dZMQBizt
+      - FTP_PASS=b7126e26c0
+    command: ["sh", "/scripts/sync-daemon.sh"]
+    restart: unless-stopped
+    networks:
+      - truenas-network
+
+  # ========================================
+  # Service de Monitoring
+  # ========================================
+  monitor-service:
+    image: alpine:latest
+    container_name: ftp-monitor-service
+    profiles:
+      - monitoring
+    depends_on:
+      - truenas
+    volumes:
+      - ./scripts:/scripts
+      - ./logs:/logs
+      - truenas-downloads:/truenas/downloads
+      - truenas-uploads:/truenas/uploads
+      - truenas-archive:/truenas/archive
+    environment:
+      - MONITOR_INTERVAL=${MONITOR_INTERVAL:-300}
+      - TRUENAS_HOST=truenas
+      - TRUENAS_API_URL=http://truenas/api/v2.0
+    command: ["sh", "/scripts/monitor-daemon.sh"]
+    restart: unless-stopped
+    networks:
+      - truenas-network
+
+  # ========================================
+  # Service Web Dashboard
+  # ========================================
+  dashboard:
+    image: nginx:alpine
+    container_name: ftp-dashboard
+    profiles:
+      - dashboard
+    depends_on:
+      - truenas
+    ports:
+      - "8080:80"
+    volumes:
+      - ./dashboard:/usr/share/nginx/html
+      - ./logs:/usr/share/nginx/html/logs:ro
+    networks:
+      - truenas-network
+
+networks:
+  truenas-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  # ========================================
+  # Volumes TrueNAS
+  # ========================================
+  truenas-config:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./truenas-data/config
+
+  truenas-pool:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./truenas-data/pool
+
+  # Datasets TrueNAS (simulés en local pour le développement)
+  truenas-downloads:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./truenas-data/pool/downloads
+
+  truenas-uploads:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./truenas-data/pool/uploads
+
+  truenas-archive:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./truenas-data/pool/archive
+
+  truenas-temp:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./truenas-data/pool/temp
