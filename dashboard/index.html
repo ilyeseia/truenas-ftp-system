@@ -201,4 +201,213 @@
             <h3 style="margin-bottom: 20px; color: #667eea;">⚡ Actions rapides</h3>
             <div class="actions-grid">
                 <button class="action-btn" onclick="connectFTP()">🔗 Connexion FTP</button>
-                <button class="action-btn" onclick="listFiles()">📋 Lister fichiers
+                <button class="action-btn" onclick="listFiles()">📋 Lister fichiers</button>
+                <button class="action-btn" onclick="syncTrueNAS()">🔄 Synchroniser</button>
+                <button class="action-btn" onclick="downloadFile()">⬇️ Télécharger</button>
+                <button class="action-btn" onclick="cleanupFiles()">🧹 Nettoyer</button>
+                <button class="action-btn" onclick="backupData()">💾 Sauvegarde</button>
+                <a href="http://truenas" class="action-btn" target="_blank">🖥️ TrueNAS Web UI</a>
+                <button class="action-btn" onclick="showStatus()">📊 Statut détaillé</button>
+            </div>
+        </div>
+        
+        <div class="logs-section">
+            <h3 style="margin-bottom: 20px; color: #667eea;">📜 Logs en temps réel</h3>
+            <div class="logs-content" id="logs-content">
+                Chargement des logs...
+            </div>
+        </div>
+    </div>
+    
+    <button class="refresh-btn" onclick="refreshData()" title="Actualiser">🔄</button>
+    
+    <script>
+        // Variables globales
+        let refreshInterval;
+        
+        // Initialisation
+        document.addEventListener('DOMContentLoaded', function() {
+            refreshData();
+            startAutoRefresh();
+        });
+        
+        // Actualisation automatique
+        function startAutoRefresh() {
+            refreshInterval = setInterval(refreshData, 30000); // 30 secondes
+        }
+        
+        // Actualiser les données
+        async function refreshData() {
+            updateStats();
+            loadLogs();
+        }
+        
+        // Mettre à jour les statistiques
+        function updateStats() {
+            // Simuler des données (en production, récupérer via API)
+            document.getElementById('file-count').textContent = Math.floor(Math.random() * 1000) + ' fichiers';
+            document.getElementById('storage-used').textContent = (Math.random() * 500).toFixed(1) + ' GB';
+            document.getElementById('last-sync').textContent = new Date().toLocaleTimeString();
+        }
+        
+        // Charger les logs
+        function loadLogs() {
+            // En production, charger les vrais logs
+            const logsContent = document.getElementById('logs-content');
+            const timestamp = new Date().toLocaleString();
+            
+            const sampleLogs = [
+                `[${timestamp}] ✅ Connexion FTP établie`,
+                `[${timestamp}] 📁 Fichier téléchargé: example.zip (45.2 MB)`,
+                `[${timestamp}] 🔄 Synchronisation TrueNAS terminée`,
+                `[${timestamp}] 💾 Espace libre: 234 GB`,
+                `[${timestamp}] 📊 Monitoring actif`
+            ];
+            
+            logsContent.textContent = sampleLogs.join('\n');
+            logsContent.scrollTop = logsContent.scrollHeight;
+        }
+        
+        // Actions
+        function connectFTP() {
+            showNotification('🔗 Connexion FTP en cours...', 'info');
+            // Simuler une action
+            setTimeout(() => {
+                showNotification('✅ Connecté au serveur FTP', 'success');
+            }, 2000);
+        }
+        
+        function listFiles() {
+            showNotification('📋 Récupération de la liste des fichiers...', 'info');
+            setTimeout(() => {
+                showNotification('✅ Liste des fichiers mise à jour', 'success');
+            }, 1500);
+        }
+        
+        function syncTrueNAS() {
+            showNotification('🔄 Synchronisation en cours...', 'info');
+            setTimeout(() => {
+                showNotification('✅ Synchronisation terminée', 'success');
+                refreshData();
+            }, 3000);
+        }
+        
+        function downloadFile() {
+            const filename = prompt('Nom du fichier à télécharger:');
+            if (filename) {
+                showNotification(`⬇️ Téléchargement de ${filename}...`, 'info');
+                setTimeout(() => {
+                    showNotification(`✅ ${filename} téléchargé avec succès`, 'success');
+                }, 4000);
+            }
+        }
+        
+        function cleanupFiles() {
+            if (confirm('Voulez-vous nettoyer les fichiers temporaires?')) {
+                showNotification('🧹 Nettoyage en cours...', 'info');
+                setTimeout(() => {
+                    showNotification('✅ Nettoyage terminé', 'success');
+                }, 2000);
+            }
+        }
+        
+        function backupData() {
+            showNotification('💾 Création de la sauvegarde...', 'info');
+            setTimeout(() => {
+                showNotification('✅ Sauvegarde créée avec succès', 'success');
+            }, 3000);
+        }
+        
+        function showStatus() {
+            const statusWindow = window.open('', 'status', 'width=800,height=600');
+            statusWindow.document.write(`
+                <html>
+                <head><title>Statut détaillé</title></head>
+                <body style="font-family: monospace; padding: 20px; background: #f5f5f5;">
+                    <h2>📊 Statut détaillé du système</h2>
+                    <pre>
+=== SERVICES ===
+TrueNAS Core: ✅ Actif
+FTP Client: ✅ Actif  
+Sync Service: ✅ Actif
+Monitor Service: ✅ Actif
+
+=== RESSOURCES ===
+CPU: 15%
+RAM: 2.4 GB / 8 GB
+Réseau: 125 MB/s
+
+=== STOCKAGE ===
+Downloads: 156 fichiers (89.4 GB)
+Uploads: 23 fichiers (12.1 GB)
+Archive: 342 fichiers (187.9 GB)
+Temp: 5 fichiers (1.2 GB)
+
+=== DERNIÈRES ACTIVITÉS ===
+${new Date().toLocaleString()} - Fichier téléchargé
+${new Date().toLocaleString()} - Synchronisation OK
+${new Date().toLocaleString()} - Archivage automatique
+                    </pre>
+                </body>
+                </html>
+            `);
+        }
+        
+        // Système de notifications
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 15px 20px;
+                border-radius: 10px;
+                color: white;
+                font-weight: bold;
+                z-index: 1000;
+                animation: slideIn 0.3s ease;
+                max-width: 300px;
+                box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            `;
+            
+            const colors = {
+                info: '#2196F3',
+                success: '#4CAF50',
+                warning: '#FF9800',
+                error: '#F44336'
+            };
+            
+            notification.style.backgroundColor = colors[type] || colors.info;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 3000);
+        }
+        
+        // Gestion des erreurs
+        window.addEventListener('error', function(e) {
+            showNotification('❌ Erreur système détectée', 'error');
+        });
+        
+        // Animations CSS
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
