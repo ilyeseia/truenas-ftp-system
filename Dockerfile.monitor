@@ -1,0 +1,30 @@
+FROM prom/prometheus:latest
+
+# ========================================
+# Monitoring Service Container
+# Features: Prometheus, custom metrics, alerting
+# ========================================
+
+USER root
+RUN apk add --no-cache curl jq bash python3 py3-pip
+
+# Install monitoring tools
+RUN pip3 install --no-cache-dir psutil requests
+
+# Create custom scripts directory
+RUN mkdir -p /scripts /config
+COPY scripts/monitoring/ /scripts/
+COPY config/monitoring/ /config/
+RUN chmod +x /scripts/*.sh
+
+# Copy Prometheus configuration
+COPY config/monitoring/prometheus.yml /etc/prometheus/
+
+USER prometheus
+
+CMD ["--config.file=/etc/prometheus/prometheus.yml", \
+     "--storage.tsdb.path=/prometheus", \
+     "--web.console.libraries=/etc/prometheus/console_libraries", \
+     "--web.console.templates=/etc/prometheus/consoles", \
+     "--web.enable-lifecycle", \
+     "--web.enable-admin-api"]

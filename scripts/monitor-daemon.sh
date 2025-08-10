@@ -1,37 +1,31 @@
-# ========================================
-# scripts/monitor-daemon.sh
-# ========================================
-#!/bin/sh
-echo "=== Démarrage du daemon de monitoring ==="
+#!/bin/bash
 
-apk add --no-cache curl jq
+# ========================================
+# Monitoring Daemon Script
+# Continuously monitor system metrics and services
+# ========================================
 
-LOG_FILE="/logs/monitor.log"
+set -euo pipefail
+
+MONITOR_LOG="/logs/monitor-daemon.log"
+MONITOR_INTERVAL="${MONITOR_INTERVAL:-60}"
+
+log_monitor() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$MONITOR_LOG"
+}
+
+# Main monitoring loop
+log_monitor "Starting monitoring daemon (interval: ${MONITOR_INTERVAL}s)"
 
 while true; do
-    echo "[$(date)] === Monitoring TrueNAS ===" >> $LOG_FILE
+    # Run system monitor
+    /scripts/monitoring/system-monitor.sh
     
-    # Vérifier l'espace disque
-    echo "=== Espace disque ===" >> $LOG_FILE
-    df -h /truenas/* >> $LOG_FILE 2>/dev/null
-    
-    # Compter les fichiers
-    echo "=== Statistiques fichiers ===" >> $LOG_FILE
-    echo "Downloads: $(find /truenas/downloads -type f | wc -l) fichiers" >> $LOG_FILE
-    echo "Uploads: $(find /truenas/uploads -type f | wc -l) fichiers" >> $LOG_FILE
-    echo "Archive: $(find /truenas/archive -type f | wc -l) fichiers" >> $LOG_FILE
-    
-    # Taille totale
-    echo "=== Tailles ===" >> $LOG_FILE
-    du -sh /truenas/* >> $LOG_FILE 2>/dev/null
-    
-    # Test de connectivité TrueNAS
-    if curl -s -f http://$TRUENAS_HOST > /dev/null; then
-        echo "[$(date)] ✅ TrueNAS accessible" >> $LOG_FILE
-    else
-        echo "[$(date)] ❌ TrueNAS inaccessible" >> $LOG_FILE
+    # Check service health
+    if ! /scripts/health-check.sh >/dev/null 2>&1; then
+        log_monitor "WARNING: Health check failed"
     fi
     
-    echo "=== Fin monitoring ===" >> $LOG_FILE
-    sleep $MONITOR_INTERVAL
+    # Sleep until next check
+    sleep "$MONITOR_INTERVAL"
 done

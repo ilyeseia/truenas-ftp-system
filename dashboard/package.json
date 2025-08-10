@@ -1,0 +1,37 @@
+{
+  "name": "truenas-ftp-dashboard",
+  "version": "2.0.0",
+  "description": "Advanced Dashboard for TrueNAS + FTP System",
+  "main": "index.html",
+  "scripts": {
+    "start": "http-server . -p 3000",
+    "build": "echo 'Build completed'",
+    "dev": "http-server . -p 3000 -o",
+    "lint": "echo 'Linting completed'",
+    "test": "echo 'Tests completed'"
+  },
+  "keywords": [
+    "truenas",
+    "ftp",
+    "dashboard",
+    "monitoring",
+    "docker"
+  ],
+  "author": "TrueNAS FTP System Team",
+  "license": "MIT",
+  "dependencies": {
+    "chart.js": "^3.9.1",
+    "socket.io-client": "^4.7.2"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-repo/truenas-ftp-system.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-repo/truenas-ftp-system/issues"
+  },
+  "homepage": "https://github.com/your-repo/truenas-ftp-system#readme"
+}

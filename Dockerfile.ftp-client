@@ -1,0 +1,63 @@
+FROM alpine:latest
+
+# ========================================
+# Enhanced FTP Client Container
+# Features: lftp, rsync, monitoring, retry logic
+# ========================================
+
+# Install system dependencies
+RUN apk add --no-cache \
+    lftp \
+    curl \
+    rsync \
+    sshpass \
+    jq \
+    wget \
+    nano \
+    bash \
+    coreutils \
+    findutils \
+    tar \
+    gzip \
+    python3 \
+    py3-pip \
+    openssl \
+    ca-certificates \
+    tzdata
+
+# Install Python packages for advanced features
+RUN pip3 install --no-cache-dir \
+    requests \
+    urllib3 \
+    tqdm \
+    rich \
+    psutil \
+    schedule
+
+# Create user and directories
+RUN addgroup -g 1000 ftpuser && \
+    adduser -u 1000 -G ftpuser -s /bin/bash -D ftpuser
+
+# Create directories with proper permissions
+RUN mkdir -p /scripts /logs /workspace /config \
+    /truenas/downloads /truenas/uploads /truenas/archive \
+    /truenas/temp /truenas/processing && \
+    chown -R ftpuser:ftpuser /scripts /logs /workspace /truenas
+
+# Copy scripts
+COPY scripts/ /scripts/
+RUN chmod +x /scripts/*.sh && \
+    chown -R ftpuser:ftpuser /scripts
+
+# Set working directory
+WORKDIR /workspace
+
+# Health check
+HEALTHCHECK --interval=60s --timeout=10s --start-period=30s --retries=3 \
+  CMD /scripts/health-check.sh || exit 1
+
+# Switch to non-root user
+USER ftpuser
+
+# Default command
+CMD ["tail", "-f", "/dev/null"]

@@ -1,0 +1,54 @@
+FROM alpine:latest
+
+# ========================================
+# Sync Service Container
+# Features: automated sync, scheduling, monitoring
+# ========================================
+
+RUN apk add --no-cache \
+    rsync \
+    curl \
+    jq \
+    bash \
+    coreutils \
+    findutils \
+    tar \
+    gzip \
+    python3 \
+    py3-pip \
+    cronie \
+    dcron \
+    tzdata
+
+# Install Python packages
+RUN pip3 install --no-cache-dir \
+    watchdog \
+    schedule \
+    psutil \
+    requests
+
+# Create user
+RUN addgroup -g 1001 syncuser && \
+    adduser -u 1001 -G syncuser -s /bin/bash -D syncuser
+
+# Create directories
+RUN mkdir -p /scripts /logs /config && \
+    chown -R syncuser:syncuser /scripts /logs
+
+# Copy scripts
+COPY scripts/ /scripts/
+RUN chmod +x /scripts/*.sh && \
+    chown -R syncuser:syncuser /scripts
+
+# Setup cron for sync user
+RUN echo "*/30 * * * * /scripts/sync-truenas.sh" > /var/spool/cron/crontabs/syncuser && \
+    chmod 600 /var/spool/cron/crontabs/syncuser && \
+    chown syncuser:syncuser /var/spool/cron/crontabs/syncuser
+
+# Health check
+HEALTHCHECK --interval=120s --timeout=15s --retries=3 \
+  CMD /scripts/sync-health-check.sh || exit 1
+
+USER syncuser
+
+CMD ["/scripts/sync-daemon.sh"]
