@@ -1,0 +1,21 @@
+[2025-08-15 09:50:03] [ERROR] Docker Compose is not installed.
+[2025-08-15 09:51:06] [SUCCESS] All requirements are met.
+[2025-08-15 09:51:06] [SUCCESS] Directory structure is ready.
+[2025-08-15 09:51:06] [SUCCESS] .env file already exists.
+[2025-08-15 09:51:06] [INFO] Using compose file: docker-compose-complete.yml
+[2025-08-15 09:51:06] [INFO] Pulling latest images...
+[2025-08-15 09:51:43] [SUCCESS] All requirements are met.
+[2025-08-15 09:51:44] [SUCCESS] Directory structure is ready.
+[2025-08-15 09:51:44] [SUCCESS] .env file already exists.
+[2025-08-15 09:51:44] [INFO] Using compose file: docker-compose-complete.yml
+[2025-08-15 09:51:44] [INFO] Pulling latest images...
+[2025-08-15 09:52:18] [SUCCESS] All requirements are met.
+[2025-08-15 09:52:19] [SUCCESS] Directory structure is ready.
+[2025-08-15 09:52:19] [SUCCESS] .env file already exists.
+[2025-08-15 09:52:19] [INFO] Using compose file: docker-compose-complete.yml
+[2025-08-15 09:52:19] [INFO] Pulling latest images...
+[2025-08-15 09:53:05] [SUCCESS] All requirements are met.
+[2025-08-15 09:53:05] [SUCCESS] Directory structure is ready.
+[2025-08-15 09:53:05] [SUCCESS] .env file already exists.
+[2025-08-15 09:53:05] [INFO] Using compose file: docker-compose-complete.yml
+[2025-08-15 09:53:05] [INFO] Pulling latest images...

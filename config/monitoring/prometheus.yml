@@ -1,0 +1,36 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "rules/*.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'truenas'
+    static_configs:
+      - targets: ['truenas:80']
+    scrape_interval: 30s
+
+  - job_name: 'ftp-client'
+    static_configs:
+      - targets: ['ftp-client:8080']
+    scrape_interval: 30s
+
+  - job_name: 'sync-service'
+    static_configs:
+      - targets: ['sync-service:8080']
+    scrape_interval: 60s
+
+  - job_name: 'dashboard'
+    static_configs:
+      - targets: ['dashboard:80']
+    scrape_interval: 30s
